@@ -10,7 +10,6 @@ export const metadata: Metadata = {
   title: "Trackpad Services - Premium Car Rentals",
   description:
     "Experience premium car rentals with unmatched flexibility. From economy to luxury, find the perfect vehicle for every adventure.",
-  generator: "v0.app",
   icons: {
     icon: [
       {
