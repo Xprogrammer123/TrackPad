@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
+import { motion } from "framer-motion"
 import type { Car } from "@/lib/types"
 import { bookingSchema, type BookingFormData } from "@/lib/validations"
 import { createClient } from "@/lib/supabase/client"
@@ -13,7 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2 } from "lucide-react"
+import { Loader2, CheckCircle } from "lucide-react"
 
 interface BookingModalProps {
   car: Car | null
@@ -26,6 +27,8 @@ export function BookingModal({ car, isOpen, onClose }: BookingModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [user, setUser] = useState<{ id: string; email: string } | null>(null)
   const [totalPrice, setTotalPrice] = useState(0)
+  const [showSuccess, setShowSuccess] = useState(false)
+  const [bookedCarName, setBookedCarName] = useState("")
 
   const {
     register,
@@ -104,10 +107,9 @@ export function BookingModal({ car, isOpen, onClose }: BookingModalProps) {
       if (result.error) {
         toast.error(result.error)
       } else {
-        toast.success("Booking confirmed! Admin has been notified via WhatsApp.")
-
+        setBookedCarName(`${car.brand} ${car.name}`)
+        setShowSuccess(true)
         reset()
-        onClose()
         router.refresh()
       }
     } catch {
@@ -119,6 +121,12 @@ export function BookingModal({ car, isOpen, onClose }: BookingModalProps) {
 
   const handleClose = () => {
     reset()
+    setShowSuccess(false)
+    onClose()
+  }
+
+  const handleSuccessClose = () => {
+    setShowSuccess(false)
     onClose()
   }
 
@@ -127,92 +135,133 @@ export function BookingModal({ car, isOpen, onClose }: BookingModalProps) {
   const today = new Date().toISOString().split("T")[0]
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>
-            Book {car.brand} {car.name}
-          </DialogTitle>
-          <DialogDescription>₦{car.price_per_day}/day - Fill in your details to complete the booking</DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={showSuccess} onOpenChange={handleSuccessClose}>
+        <DialogContent className="sm:max-w-md text-center">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", duration: 0.5 }}
+            className="mx-auto mb-4"
+          >
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary/20">
+              <CheckCircle className="h-12 w-12 text-primary" />
+            </div>
+          </motion.div>
 
-        {!user && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-            <p className="text-sm text-amber-800">
-              Please{" "}
-              <a href="/auth/login" className="font-medium underline">
-                login
-              </a>{" "}
-              or{" "}
-              <a href="/auth/sign-up" className="font-medium underline">
-                sign up
-              </a>{" "}
-              to book this car.
+          <DialogHeader className="text-center">
+            <DialogTitle className="text-2xl text-center">Success!</DialogTitle>
+          </DialogHeader>
+
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="space-y-4 py-4"
+          >
+            <p className="text-lg">
+              You have successfully booked <span className="font-bold text-primary">{bookedCarName}</span>
             </p>
-          </div>
-        )}
+            <p className="text-muted-foreground">You will receive a call from the car dealer as soon as possible.</p>
+            <p className="text-sm font-medium text-muted-foreground">Thanks for using TrackPad Services!</p>
+          </motion.div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <input type="hidden" {...register("carId")} />
+          <Button onClick={handleSuccessClose} className="w-full mt-4">
+            Done
+          </Button>
+        </DialogContent>
+      </Dialog>
 
-          <div className="space-y-2">
-            <Label htmlFor="customerName">Full Name</Label>
-            <Input id="customerName" placeholder="John Doe" {...register("customerName")} />
-            {errors.customerName && <p className="text-sm text-destructive">{errors.customerName.message}</p>}
-          </div>
+      {/* Existing Booking Modal */}
+      <Dialog open={isOpen && !showSuccess} onOpenChange={handleClose}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              Book {car.brand} {car.name}
+            </DialogTitle>
+            <DialogDescription>
+              ₦{car.price_per_day}/day - Fill in your details to complete the booking
+            </DialogDescription>
+          </DialogHeader>
 
-          <div className="space-y-2">
-            <Label htmlFor="customerEmail">Email</Label>
-            <Input id="customerEmail" type="email" placeholder="john@example.com" {...register("customerEmail")} />
-            {errors.customerEmail && <p className="text-sm text-destructive">{errors.customerEmail.message}</p>}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="customerPhone">Phone Number</Label>
-            <Input id="customerPhone" type="tel" placeholder="+1 (555) 000-0000" {...register("customerPhone")} />
-            {errors.customerPhone && <p className="text-sm text-destructive">{errors.customerPhone.message}</p>}
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="startDate">Start Date</Label>
-              <Input id="startDate" type="date" min={today} {...register("startDate")} />
-              {errors.startDate && <p className="text-sm text-destructive">{errors.startDate.message}</p>}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="endDate">End Date</Label>
-              <Input id="endDate" type="date" min={startDate || today} {...register("endDate")} />
-              {errors.endDate && <p className="text-sm text-destructive">{errors.endDate.message}</p>}
-            </div>
-          </div>
-
-          {totalPrice > 0 && (
-            <div className="rounded-lg bg-muted p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Total Price</span>
-                <span className="text-2xl font-bold">₦{totalPrice.toLocaleString()}</span>
-              </div>
+          {!user && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+              <p className="text-sm text-amber-800">
+                Please{" "}
+                <a href="/auth/login" className="font-medium underline">
+                  login
+                </a>{" "}
+                or{" "}
+                <a href="/auth/sign-up" className="font-medium underline">
+                  sign up
+                </a>{" "}
+                to book this car.
+              </p>
             </div>
           )}
 
-          <div className="flex gap-3">
-            <Button type="button" variant="outline" className="flex-1 bg-transparent" onClick={handleClose}>
-              Cancel
-            </Button>
-            <Button type="submit" className="flex-1" disabled={isSubmitting || !user}>
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Booking...
-                </>
-              ) : (
-                "Confirm Booking"
-              )}
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <input type="hidden" {...register("carId")} />
+
+            <div className="space-y-2">
+              <Label htmlFor="customerName">Full Name</Label>
+              <Input id="customerName" placeholder="John Doe" {...register("customerName")} />
+              {errors.customerName && <p className="text-sm text-destructive">{errors.customerName.message}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="customerEmail">Email</Label>
+              <Input id="customerEmail" type="email" placeholder="john@example.com" {...register("customerEmail")} />
+              {errors.customerEmail && <p className="text-sm text-destructive">{errors.customerEmail.message}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="customerPhone">Phone Number</Label>
+              <Input id="customerPhone" type="tel" placeholder="+1 (555) 000-0000" {...register("customerPhone")} />
+              {errors.customerPhone && <p className="text-sm text-destructive">{errors.customerPhone.message}</p>}
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="startDate">Start Date</Label>
+                <Input id="startDate" type="date" min={today} {...register("startDate")} />
+                {errors.startDate && <p className="text-sm text-destructive">{errors.startDate.message}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="endDate">End Date</Label>
+                <Input id="endDate" type="date" min={startDate || today} {...register("endDate")} />
+                {errors.endDate && <p className="text-sm text-destructive">{errors.endDate.message}</p>}
+              </div>
+            </div>
+
+            {totalPrice > 0 && (
+              <div className="rounded-lg bg-muted p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Total Price</span>
+                  <span className="text-2xl font-bold">₦{totalPrice.toLocaleString()}</span>
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <Button type="button" variant="outline" className="flex-1 bg-transparent" onClick={handleClose}>
+                Cancel
+              </Button>
+              <Button type="submit" className="flex-1" disabled={isSubmitting || !user}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Booking...
+                  </>
+                ) : (
+                  "Confirm Booking"
+                )}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
