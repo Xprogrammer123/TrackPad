@@ -78,7 +78,9 @@ export async function bookCar(input: BookCarInput) {
     return { error: "Failed to update car status" }
   }
 
-  await sendWhatsAppNotification({
+  console.log("[v0] Booking successful, sending WhatsApp notification...")
+
+  const whatsappResult = await sendWhatsAppNotification({
     customerName: input.customerName,
     customerEmail: input.customerEmail,
     customerPhone: input.customerPhone,
@@ -88,6 +90,8 @@ export async function bookCar(input: BookCarInput) {
     endDate: input.endDate,
     totalPrice: input.totalPrice,
   })
+
+  console.log("[v0] WhatsApp notification result:", whatsappResult)
 
   revalidatePath("/cars")
   revalidatePath("/dashboard")

@@ -9,7 +9,6 @@ import type { Car } from "@/lib/types"
 import { bookingSchema, type BookingFormData } from "@/lib/validations"
 import { createClient } from "@/lib/supabase/client"
 import { bookCar } from "@/app/actions/booking"
-import { generateWhatsAppLink } from "@/lib/whatsapp"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -105,20 +104,7 @@ export function BookingModal({ car, isOpen, onClose }: BookingModalProps) {
       if (result.error) {
         toast.error(result.error)
       } else {
-        toast.success("Booking confirmed! Redirecting to WhatsApp to notify admin...")
-
-        const whatsappLink = generateWhatsAppLink({
-          customerName: data.customerName,
-          customerEmail: data.customerEmail,
-          customerPhone: data.customerPhone,
-          carName: car.name,
-          carBrand: car.brand,
-          startDate: data.startDate,
-          endDate: data.endDate,
-          totalPrice,
-        })
-
-        window.open(whatsappLink, "_blank")
+        toast.success("Booking confirmed! Admin has been notified via WhatsApp.")
 
         reset()
         onClose()

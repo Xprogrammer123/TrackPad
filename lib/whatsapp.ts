@@ -1,4 +1,4 @@
-const ADMIN_WHATSAPP_NUMBER = "2349138983178"
+const ADMIN_WHATSAPP_NUMBER = "+2349138983178"
 
 interface BookingNotification {
   customerName: string
@@ -9,30 +9,6 @@ interface BookingNotification {
   startDate: string
   endDate: string
   totalPrice: number
-}
-
-export function generateWhatsAppLink(booking: BookingNotification): string {
-  const message = `🚗 *New Booking Alert!*
-
-*Customer Details:*
-• Name: ${booking.customerName}
-• Email: ${booking.customerEmail}
-• Phone: ${booking.customerPhone}
-
-*Car Details:*
-• Car: ${booking.carBrand} ${booking.carName}
-
-*Booking Period:*
-• From: ${new Date(booking.startDate).toLocaleDateString()}
-• To: ${new Date(booking.endDate).toLocaleDateString()}
-
-*Total Price:* ₦${booking.totalPrice.toLocaleString()}
-
----
-TrackPad Services`
-
-  const encodedMessage = encodeURIComponent(message)
-  return `https://wa.me/${ADMIN_WHATSAPP_NUMBER}?text=${encodedMessage}`
 }
 
 export async function sendWhatsAppNotification(booking: BookingNotification) {
@@ -56,32 +32,38 @@ export async function sendWhatsAppNotification(booking: BookingNotification) {
 TrackPad Services`
 
   try {
-    // Using CallMeBot WhatsApp API (free service)
-    // Note: Admin needs to activate this first by sending a message to the bot
-    // Instructions: https://www.callmebot.com/blog/free-api-whatsapp-messages/
-    const encodedMessage = encodeURIComponent(message)
     const apiKey = process.env.CALLMEBOT_API_KEY
 
+    console.log("[v0] WhatsApp API Key exists:", !!apiKey)
+    console.log("[v0] Sending to number:", ADMIN_WHATSAPP_NUMBER)
+
     if (apiKey) {
+      const encodedMessage = encodeURIComponent(message)
       const url = `https://api.callmebot.com/whatsapp.php?phone=${ADMIN_WHATSAPP_NUMBER}&text=${encodedMessage}&apikey=${apiKey}`
+
+      console.log("[v0] Sending WhatsApp notification...")
 
       const response = await fetch(url, {
         method: "GET",
       })
 
+      const responseText = await response.text()
+      console.log("[v0] WhatsApp API response status:", response.status)
+      console.log("[v0] WhatsApp API response:", responseText)
+
       if (!response.ok) {
-        console.error("WhatsApp notification failed:", await response.text())
+        console.error("WhatsApp notification failed:", responseText)
         return { success: false, error: "Failed to send WhatsApp notification" }
       }
 
+      console.log("[v0] WhatsApp notification sent successfully!")
       return { success: true }
     }
 
-    // Fallback: Log the message if no API key is configured
-    console.log("[WhatsApp Notification]", message)
+    console.log("[v0] No API key - fallback mode")
     return { success: true, fallback: true }
   } catch (error) {
-    console.error("WhatsApp notification error:", error)
+    console.error("[v0] WhatsApp notification error:", error)
     return { success: false, error: "Failed to send WhatsApp notification" }
   }
 }
