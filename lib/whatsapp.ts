@@ -1,5 +1,3 @@
-const ADMIN_WHATSAPP_NUMBER = "+2349138983178"
-
 interface BookingNotification {
   customerName: string
   customerEmail: string
@@ -10,6 +8,17 @@ interface BookingNotification {
   endDate: string
   totalPrice: number
 }
+
+interface WhatsAppRecipient {
+  phone: string
+  apiKey?: string
+}
+
+// Add all numbers you want to notify here
+const ADMIN_WHATSAPP_RECIPIENTS: WhatsAppRecipient[] = [
+  { phone: "+2349138983178", apiKey: process.env.CALLMEBOT_API_KEY },
+  { phone: "+2348079088275", apiKey: process.env.CALLMEBOT_API_KEY_2 },
+]
 
 export async function sendWhatsAppNotification(booking: BookingNotification) {
   const message = `🚗 *New Booking Alert!*
@@ -31,39 +40,38 @@ export async function sendWhatsAppNotification(booking: BookingNotification) {
 ---
 TrackPad Services`
 
+  if (!ADMIN_WHATSAPP_RECIPIENTS.length) {
+    console.warn("No WhatsApp recipients configured.")
+    return { success: false, error: "No recipients configured" }
+  }
+
   try {
-    const apiKey = process.env.CALLMEBOT_API_KEY
-
-    console.log("[v0] WhatsApp API Key exists:", !!apiKey)
-    console.log("[v0] Sending to number:", ADMIN_WHATSAPP_NUMBER)
-
-    if (apiKey) {
-      const encodedMessage = encodeURIComponent(message)
-      const url = `https://api.callmebot.com/whatsapp.php?phone=${ADMIN_WHATSAPP_NUMBER}&text=${encodedMessage}&apikey=${apiKey}`
-
-      console.log("[v0] Sending WhatsApp notification...")
-
-      const response = await fetch(url, {
-        method: "GET",
-      })
-
-      const responseText = await response.text()
-      console.log("[v0] WhatsApp API response status:", response.status)
-      console.log("[v0] WhatsApp API response:", responseText)
-
-      if (!response.ok) {
-        console.error("WhatsApp notification failed:", responseText)
-        return { success: false, error: "Failed to send WhatsApp notification" }
+    for (const recipient of ADMIN_WHATSAPP_RECIPIENTS) {
+      if (!recipient.apiKey) {
+        console.warn(`No API key for number ${recipient.phone}, skipping.`)
+        continue
       }
 
-      console.log("[v0] WhatsApp notification sent successfully!")
-      return { success: true }
+      const encodedMessage = encodeURIComponent(message)
+      const url = `https://api.callmebot.com/whatsapp.php?phone=${recipient.phone}&text=${encodedMessage}&apikey=${recipient.apiKey}`
+
+      console.log(`Sending WhatsApp notification to ${recipient.phone}...`)
+
+      const response = await fetch(url, { method: "GET" })
+      const responseText = await response.text()
+
+      console.log(`WhatsApp API response for ${recipient.phone}:`, response.status, responseText)
+
+      if (!response.ok) {
+        console.error(`Failed to send WhatsApp notification to ${recipient.phone}:`, responseText)
+      } else {
+        console.log(`WhatsApp notification sent successfully to ${recipient.phone}!`)
+      }
     }
 
-    console.log("[v0] No API key - fallback mode")
-    return { success: true, fallback: true }
+    return { success: true }
   } catch (error) {
-    console.error("[v0] WhatsApp notification error:", error)
+    console.error("WhatsApp notification error:", error)
     return { success: false, error: "Failed to send WhatsApp notification" }
   }
 }
