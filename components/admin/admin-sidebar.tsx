@@ -29,7 +29,6 @@ export function AdminSidebar({ availableCarsCount, bookedCarsCount }: AdminSideb
   const pathname = usePathname()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   
-  // Get current view from pathname
   const getCurrentView = () => {
     if (pathname === "/admin") return "overview"
     if (pathname === "/admin/available") return "available"

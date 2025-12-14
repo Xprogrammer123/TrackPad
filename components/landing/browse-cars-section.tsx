@@ -37,7 +37,7 @@ export async function BrowseCarsSection() {
           </Link>
         </div>
 
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {cars && cars.length > 0 ? (
             cars.map((car: Car) => (
               <Card key={car.id} className="group overflow-hidden">
