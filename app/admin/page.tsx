@@ -7,7 +7,7 @@ import { CombinedBookingsChart } from "@/components/admin/combined-bookings-char
 import { BookedCarsTable } from "@/components/admin/booked-cars-table"
 import { AvailableCarsTable } from "@/components/admin/available-cars-table"
 import { AddCarForm } from "@/components/admin/add-car-form"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { AdminSidebar } from "@/components/admin/admin-sidebar"
 import { syncCarBookingStatus } from "@/app/actions/admin"
 
 export const metadata = {
@@ -15,7 +15,11 @@ export const metadata = {
   description: "Manage cars, bookings, and view analytics",
 }
 
-export default async function AdminPage() {
+interface AdminPageProps {
+  searchParams: { view?: string }
+}
+
+export default async function AdminPage({ searchParams }: AdminPageProps) {
   const supabase = await createClient()
 
   const {
@@ -98,49 +102,45 @@ export default async function AdminPage() {
   // Get currently booked cars with customer info (only active bookings)
   const bookedCarsWithCustomers = activeBookings
 
+  const currentView = searchParams?.view || "overview"
+
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
-      <main className="flex-1 bg-muted/30">
-        <div className="container mx-auto px-4 py-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
-            <p className="mt-2 text-muted-foreground">Manage your fleet and monitor bookings</p>
+      <div className="flex flex-1 pt-16 lg:pt-0">
+        <AdminSidebar availableCarsCount={availableCars.length} bookedCarsCount={bookedCarsList.length} />
+        <main className="flex-1 bg-muted/30 lg:ml-64">
+          <div className="container mx-auto px-4 py-8 lg:px-8">
+            <div className="mb-8">
+              <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
+              <p className="mt-2 text-muted-foreground">Manage your fleet and monitor bookings</p>
+            </div>
+
+            <AdminStats
+              totalCars={totalCars}
+              bookedCars={bookedCars}
+              totalRevenue={totalRevenue}
+              totalBookings={totalBookings}
+            />
+
+            <div className="mt-8">
+              {currentView === "overview" && (
+                <div>
+                  <CombinedBookingsChart data={combinedChartData} brands={brands} />
+                </div>
+              )}
+
+              {currentView === "available" && <AvailableCarsTable cars={availableCars} />}
+
+              {currentView === "booked" && (
+                <BookedCarsTable bookings={bookedCarsWithCustomers} cars={bookedCarsList} />
+              )}
+
+              {currentView === "add-car" && <AddCarForm />}
+            </div>
           </div>
-
-          <AdminStats
-            totalCars={totalCars}
-            bookedCars={bookedCars}
-            totalRevenue={totalRevenue}
-            totalBookings={totalBookings}
-          />
-
-          <Tabs defaultValue="overview" className="mt-8">
-            <TabsList>
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="available">Available Cars ({availableCars.length})</TabsTrigger>
-              <TabsTrigger value="booked">Booked Cars ({bookedCarsList.length})</TabsTrigger>
-              <TabsTrigger value="add-car">Add New Car</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="overview" className="mt-6">
-              <CombinedBookingsChart data={combinedChartData} brands={brands} />
-            </TabsContent>
-
-            <TabsContent value="available" className="mt-6">
-              <AvailableCarsTable cars={availableCars} />
-            </TabsContent>
-
-            <TabsContent value="booked" className="mt-6">
-              <BookedCarsTable bookings={bookedCarsWithCustomers} cars={bookedCarsList} />
-            </TabsContent>
-
-            <TabsContent value="add-car" className="mt-6">
-              <AddCarForm />
-            </TabsContent>
-          </Tabs>
-        </div>
-      </main>
+        </main>
+      </div>
       <Footer />
     </div>
   )

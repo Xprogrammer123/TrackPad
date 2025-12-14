@@ -151,3 +151,105 @@ export async function unbookCar(carId: string, bookingId: string) {
 
   return { success: true }
 }
+
+interface EditCarInput {
+  id: string
+  name: string
+  brand: string
+  pricePerDay: number
+  imageUrl?: string
+}
+
+export async function editCar(input: EditCarInput) {
+  const supabase = await createClient()
+
+  // Validate input
+  const validationResult = carSchema.safeParse({
+    name: input.name,
+    brand: input.brand,
+    pricePerDay: input.pricePerDay,
+    imageUrl: input.imageUrl,
+  })
+  if (!validationResult.success) {
+    return { error: validationResult.error.errors[0].message }
+  }
+
+  // Verify user is authenticated and is admin
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return { error: "You must be logged in to edit a car" }
+  }
+
+  const isAdmin = user.user_metadata?.is_admin === true
+  if (!isAdmin) {
+    return { error: "You must be an admin to edit cars" }
+  }
+
+  // Update car
+  const { error: updateError } = await supabase
+    .from("cars")
+    .update({
+      name: input.name,
+      brand: input.brand,
+      price_per_day: input.pricePerDay,
+      image_url: input.imageUrl || null,
+    })
+    .eq("id", input.id)
+
+  if (updateError) {
+    console.error("Update car error:", updateError)
+    return { error: "Failed to update car" }
+  }
+
+  revalidatePath("/cars")
+  revalidatePath("/admin")
+
+  return { success: true }
+}
+
+export async function deleteCar(carId: string) {
+  const supabase = await createClient()
+
+  // Verify user is authenticated and is admin
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
+  if (authError || !user) {
+    return { error: "You must be logged in to delete a car" }
+  }
+
+  const isAdmin = user.user_metadata?.is_admin === true
+  if (!isAdmin) {
+    return { error: "You must be an admin to delete cars" }
+  }
+
+  // Check if car has active bookings
+  const today = new Date().toISOString().split("T")[0]
+  const { data: activeBookings } = await supabase
+    .from("bookings")
+    .select("id")
+    .eq("car_id", carId)
+    .gte("end_date", today)
+
+  if (activeBookings && activeBookings.length > 0) {
+    return { error: "Cannot delete car with active bookings" }
+  }
+
+  // Delete car (bookings will be cascade deleted due to foreign key)
+  const { error: deleteError } = await supabase.from("cars").delete().eq("id", carId)
+
+  if (deleteError) {
+    console.error("Delete car error:", deleteError)
+    return { error: "Failed to delete car" }
+  }
+
+  revalidatePath("/cars")
+  revalidatePath("/admin")
+  revalidatePath("/")
+
+  return { success: true }
+}
