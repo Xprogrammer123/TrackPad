@@ -54,6 +54,64 @@ export async function addCar(input: AddCarInput) {
   return { success: true }
 }
 
+
+export async function syncCarBookingStatus() {
+  const supabase = await createClient()
+
+  // Get all cars marked as booked
+  const { data: bookedCars, error: carsError } = await supabase
+    .from("cars")
+    .select("id")
+    .eq("is_booked", true)
+
+  if (carsError || !bookedCars) {
+    console.error("Error fetching booked cars:", carsError)
+    return { error: "Failed to fetch booked cars" }
+  }
+
+  if (bookedCars.length === 0) {
+    return { success: true, updated: 0 }
+  }
+
+  const carIds = bookedCars.map((c) => c.id)
+  const today = new Date().toISOString().split("T")[0] // Get today's date in YYYY-MM-DD format
+
+  // Get all active bookings (end_date >= today) for these cars
+  const { data: activeBookings, error: bookingsError } = await supabase
+    .from("bookings")
+    .select("car_id")
+    .in("car_id", carIds)
+    .gte("end_date", today)
+
+  if (bookingsError) {
+    console.error("Error fetching active bookings:", bookingsError)
+    return { error: "Failed to fetch active bookings" }
+  }
+
+  // Get car IDs that have active bookings
+  const carsWithActiveBookings = new Set(activeBookings?.map((b) => b.car_id) || [])
+
+  // Find cars that are marked as booked but have no active bookings
+  const carsToUnbook = carIds.filter((carId) => !carsWithActiveBookings.has(carId))
+
+  if (carsToUnbook.length === 0) {
+    return { success: true, updated: 0 }
+  }
+
+  // Update these cars to be available
+  const { error: updateError } = await supabase
+    .from("cars")
+    .update({ is_booked: false })
+    .in("id", carsToUnbook)
+
+  if (updateError) {
+    console.error("Error updating car status:", updateError)
+    return { error: "Failed to update car status" }
+  }
+
+  return { success: true, updated: carsToUnbook.length }
+}
+
 export async function unbookCar(carId: string, bookingId: string) {
   const supabase = await createClient()
 

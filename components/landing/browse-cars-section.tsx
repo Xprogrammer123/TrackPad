@@ -5,9 +5,14 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ArrowRight } from "lucide-react"
 import type { Car } from "@/lib/types"
+import { syncCarBookingStatus } from "@/app/actions/admin"
 
 export async function BrowseCarsSection() {
   const supabase = await createClient()
+  
+  // Sync car booking status to ensure expired bookings are cleared
+  await syncCarBookingStatus()
+  
   const { data: cars } = await supabase
     .from("cars")
     .select("*")

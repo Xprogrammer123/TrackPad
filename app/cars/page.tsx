@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 import { CarGrid } from "@/components/cars/car-grid"
+import { syncCarBookingStatus } from "@/app/actions/admin"
 
 export const metadata = {
   title: "Available Cars - TrackPad",
@@ -10,6 +11,9 @@ export const metadata = {
 
 export default async function CarsPage() {
   const supabase = await createClient()
+
+  // Sync car booking status to ensure expired bookings are cleared
+  await syncCarBookingStatus()
 
   const { data: cars, error } = await supabase.from("cars").select("*").order("created_at", { ascending: false })
 

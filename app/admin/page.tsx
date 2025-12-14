@@ -8,6 +8,7 @@ import { BookedCarsTable } from "@/components/admin/booked-cars-table"
 import { AvailableCarsTable } from "@/components/admin/available-cars-table"
 import { AddCarForm } from "@/components/admin/add-car-form"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { syncCarBookingStatus } from "@/app/actions/admin"
 
 export const metadata = {
   title: "Admin Dashboard - TrackPad",
@@ -31,6 +32,9 @@ export default async function AdminPage() {
     redirect("/")
   }
 
+  // Sync car booking status - update cars whose bookings have expired
+  await syncCarBookingStatus()
+
   // Fetch all bookings with car details (admin can see all)
   const { data: bookings } = await supabase
     .from("bookings")
@@ -43,14 +47,30 @@ export default async function AdminPage() {
   // Fetch all cars
   const { data: cars } = await supabase.from("cars").select("*").order("created_at", { ascending: false })
 
+  const today = new Date()
+  today.setHours(0, 0, 0, 0) // Set to start of day for accurate comparison
+
+  // Get active bookings (end_date >= today)
+  const activeBookings =
+    bookings?.filter((b) => {
+      const endDate = new Date(b.end_date)
+      endDate.setHours(0, 0, 0, 0)
+      return endDate >= today
+    }) || []
+
   // Calculate stats
   const totalCars = cars?.length || 0
-  const bookedCars = cars?.filter((c) => c.is_booked).length || 0
+  // Count booked cars based on active bookings, not just is_booked flag
+  const bookedCars = activeBookings.length > 0 ? new Set(activeBookings.map((b) => b.car_id)).size : 0
   const totalRevenue = bookings?.reduce((sum, b) => sum + Number(b.total_price), 0) || 0
   const totalBookings = bookings?.length || 0
 
-  const availableCars = cars?.filter((c) => !c.is_booked) || []
-  const bookedCarsList = cars?.filter((c) => c.is_booked) || []
+  // Get car IDs that have active bookings
+  const carsWithActiveBookings = new Set(activeBookings.map((b) => b.car_id))
+
+  // Filter cars based on active bookings (not just is_booked flag)
+  const availableCars = cars?.filter((c) => !carsWithActiveBookings.has(c.id)) || []
+  const bookedCarsList = cars?.filter((c) => carsWithActiveBookings.has(c.id)) || []
 
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
@@ -75,12 +95,8 @@ export default async function AdminPage() {
     return dataPoint
   })
 
-  // Get currently booked cars with customer info
-  const bookedCarsWithCustomers =
-    bookings?.filter((b) => {
-      const endDate = new Date(b.end_date)
-      return endDate >= new Date()
-    }) || []
+  // Get currently booked cars with customer info (only active bookings)
+  const bookedCarsWithCustomers = activeBookings
 
   return (
     <div className="flex min-h-screen flex-col">
