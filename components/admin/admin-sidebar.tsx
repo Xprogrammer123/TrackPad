@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter, usePathname, useSearchParams } from "next/navigation"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { LayoutDashboard, Car, Calendar, Plus, Menu, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -18,25 +19,26 @@ interface AdminSidebarProps {
 }
 
 const navItems = [
-  { view: "overview", label: "Overview", icon: LayoutDashboard, key: "overview" },
-  { view: "available", label: "Available Cars", icon: Car, key: "available" },
-  { view: "booked", label: "Booked Cars", icon: Calendar, key: "booked" },
-  { view: "add-car", label: "Add New Car", icon: Plus, key: "add-car" },
+  { href: "/admin", label: "Overview", icon: LayoutDashboard, key: "overview" },
+  { href: "/admin/available", label: "Available Cars", icon: Car, key: "available" },
+  { href: "/admin/booked", label: "Booked Cars", icon: Calendar, key: "booked" },
+  { href: "/admin/add-car", label: "Add New Car", icon: Plus, key: "add-car" },
 ]
 
 export function AdminSidebar({ availableCarsCount, bookedCarsCount }: AdminSidebarProps) {
-  const router = useRouter()
   const pathname = usePathname()
-  const searchParams = useSearchParams()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   
-  // Get current view from URL search params
-  const currentView = searchParams?.get("view") || "overview"
-
-  const handleNavigation = (view: string) => {
-    router.push(`/admin?view=${view}`)
-    setIsMobileMenuOpen(false)
+  // Get current view from pathname
+  const getCurrentView = () => {
+    if (pathname === "/admin") return "overview"
+    if (pathname === "/admin/available") return "available"
+    if (pathname === "/admin/booked") return "booked"
+    if (pathname === "/admin/add-car") return "add-car"
+    return "overview"
   }
+
+  const currentView = getCurrentView()
 
   const SidebarContent = () => (
     <div className="flex h-full flex-col border-r bg-background">
@@ -50,9 +52,9 @@ export function AdminSidebar({ availableCarsCount, bookedCarsCount }: AdminSideb
           const count = item.key === "available" ? availableCarsCount : item.key === "booked" ? bookedCarsCount : null
 
           return (
-            <button
+            <Link
               key={item.key}
-              onClick={() => handleNavigation(item.view)}
+              href={item.href}
               className={cn(
                 "w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                 isActive
@@ -67,7 +69,7 @@ export function AdminSidebar({ availableCarsCount, bookedCarsCount }: AdminSideb
                   {count}
                 </span>
               )}
-            </button>
+            </Link>
           )
         })}
       </nav>
@@ -113,9 +115,10 @@ export function AdminSidebar({ availableCarsCount, bookedCarsCount }: AdminSideb
                   const count = item.key === "available" ? availableCarsCount : item.key === "booked" ? bookedCarsCount : null
 
                   return (
-                    <button
+                    <Link
                       key={item.key}
-                      onClick={() => handleNavigation(item.view)}
+                      href={item.href}
+                      onClick={() => setIsMobileMenuOpen(false)}
                       className={cn(
                         "w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                         isActive
@@ -130,7 +133,7 @@ export function AdminSidebar({ availableCarsCount, bookedCarsCount }: AdminSideb
                           {count}
                         </span>
                       )}
-                    </button>
+                    </Link>
                   )
                 })}
               </nav>
