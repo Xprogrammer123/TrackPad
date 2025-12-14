@@ -1,8 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import Link from "next/link"
-import { usePathname, useSearchParams } from "next/navigation"
+import { useState } from "react"
+import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { LayoutDashboard, Car, Calendar, Plus, Menu, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -19,19 +18,25 @@ interface AdminSidebarProps {
 }
 
 const navItems = [
-  { href: "/admin?view=overview", label: "Overview", icon: LayoutDashboard, key: "overview" },
-  { href: "/admin?view=available", label: "Available Cars", icon: Car, key: "available" },
-  { href: "/admin?view=booked", label: "Booked Cars", icon: Calendar, key: "booked" },
-  { href: "/admin?view=add-car", label: "Add New Car", icon: Plus, key: "add-car" },
+  { view: "overview", label: "Overview", icon: LayoutDashboard, key: "overview" },
+  { view: "available", label: "Available Cars", icon: Car, key: "available" },
+  { view: "booked", label: "Booked Cars", icon: Calendar, key: "booked" },
+  { view: "add-car", label: "Add New Car", icon: Plus, key: "add-car" },
 ]
 
 export function AdminSidebar({ availableCarsCount, bookedCarsCount }: AdminSidebarProps) {
+  const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   
   // Get current view from URL search params
   const currentView = searchParams?.get("view") || "overview"
+
+  const handleNavigation = (view: string) => {
+    router.push(`/admin?view=${view}`)
+    setIsMobileMenuOpen(false)
+  }
 
   const SidebarContent = () => (
     <div className="flex h-full flex-col border-r bg-background">
@@ -45,25 +50,24 @@ export function AdminSidebar({ availableCarsCount, bookedCarsCount }: AdminSideb
           const count = item.key === "available" ? availableCarsCount : item.key === "booked" ? bookedCarsCount : null
 
           return (
-            <Link
+            <button
               key={item.key}
-              href={item.href}
-              onClick={() => setIsMobileMenuOpen(false)}
+              onClick={() => handleNavigation(item.view)}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                "w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                 isActive
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
               )}
             >
               <Icon className="h-5 w-5" />
-              <span className="flex-1">{item.label}</span>
+              <span className="flex-1 text-left">{item.label}</span>
               {count !== null && (
                 <span className={cn("rounded-full px-2 py-0.5 text-xs", isActive ? "bg-primary-foreground/20" : "bg-muted")}>
                   {count}
                 </span>
               )}
-            </Link>
+            </button>
           )
         })}
       </nav>
@@ -109,25 +113,24 @@ export function AdminSidebar({ availableCarsCount, bookedCarsCount }: AdminSideb
                   const count = item.key === "available" ? availableCarsCount : item.key === "booked" ? bookedCarsCount : null
 
                   return (
-                    <Link
+                    <button
                       key={item.key}
-                      href={item.href}
-                      onClick={() => setIsMobileMenuOpen(false)}
+                      onClick={() => handleNavigation(item.view)}
                       className={cn(
-                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                        "w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                         isActive
                           ? "bg-primary text-primary-foreground"
                           : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                       )}
                     >
                       <Icon className="h-5 w-5" />
-                      <span className="flex-1">{item.label}</span>
+                      <span className="flex-1 text-left">{item.label}</span>
                       {count !== null && (
                         <span className={cn("rounded-full px-2 py-0.5 text-xs", isActive ? "bg-primary-foreground/20" : "bg-muted")}>
                           {count}
                         </span>
                       )}
-                    </Link>
+                    </button>
                   )
                 })}
               </nav>
